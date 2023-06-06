@@ -6,7 +6,8 @@ members = [
     "programs/*",
     "relayer",
     "sdk",
-    "utils"
+    "utils",
+    "lookup_tables",
 ]
 
 [profile.release]

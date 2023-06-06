@@ -1045,6 +1045,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "client"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anyhow",
+ "base64 0.13.1",
+ "bincode",
+ "chrono",
+ "clockwork-thread-program",
+ "clockwork-utils 2.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lookup-tables",
+ "reqwest",
+ "serde_json",
+ "solana-address-lookup-table-program",
+ "solana-cli-config",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "thiserror",
+]
+
+[[package]]
 name = "clockwork-anchor-gen"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1107,7 +1129,7 @@ dependencies = [
  "clockwork-plugin-utils",
  "clockwork-relayer-api",
  "clockwork-thread-program",
- "clockwork-utils",
+ "clockwork-utils 2.0.17",
  "clockwork-webhook-program",
  "dirs-next",
  "indicatif",
@@ -1143,7 +1165,7 @@ version = "2.0.17"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
- "clockwork-utils",
+ "clockwork-utils 2.0.17",
  "toml_datetime",
  "winnow",
 ]
@@ -1210,7 +1232,7 @@ dependencies = [
  "clockwork-cron",
  "clockwork-network-program",
  "clockwork-thread-program-v1",
- "clockwork-utils",
+ "clockwork-utils 2.0.17",
  "pyth-sdk-solana",
  "static-pubkey",
  "version",
@@ -1236,12 +1258,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "clockwork-utils"
+version = "2.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "615a24a00efd7b230169ddf7ef1ecfba75105e94156b19be579bc2aa5235befa"
+dependencies = [
+ "anchor-lang",
+ "base64 0.13.1",
+ "serde",
+ "serde_json",
+ "static-pubkey",
+]
+
+[[package]]
 name = "clockwork-webhook-program"
 version = "2.0.17"
 dependencies = [
  "anchor-lang",
  "clockwork-network-program",
- "clockwork-utils",
+ "clockwork-utils 2.0.17",
  "serde",
 ]
 
@@ -1263,7 +1298,7 @@ dependencies = [
  "clockwork-relayer-api",
  "clockwork-thread-program",
  "clockwork-thread-program-v1",
- "clockwork-utils",
+ "clockwork-utils 2.0.17",
  "clockwork-webhook-program",
  "futures",
  "lazy_static",
@@ -2616,6 +2651,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "lookup-tables"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "clockwork-sdk",
 ]
 
 [[package]]
