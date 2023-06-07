@@ -1,9 +1,6 @@
-#![allow(unused)]
-
 mod client;
 use client::*;
 use clockwork_thread_program::state::BigInstruction;
-use solana_sdk::{compute_budget::ComputeBudgetInstruction, system_instruction::SystemInstruction};
 
 use {
     anchor_lang::{
@@ -13,22 +10,17 @@ use {
     },
     anyhow::Result,
     bincode::serialize,
-    clockwork_thread_program::state::{LookupTables, Thread, Trigger, PAYER_PUBKEY},
+    clockwork_thread_program::state::{LookupTables, Thread, Trigger},
     serde_json::json,
-    solana_address_lookup_table_program::{
-        instruction::{create_lookup_table, extend_lookup_table},
-        state::AddressLookupTable,
-    },
+    solana_address_lookup_table_program::state::AddressLookupTable,
     solana_client::{rpc_config::RpcSendTransactionConfig, rpc_request::RpcRequest},
     solana_sdk::{
         address_lookup_table_account::AddressLookupTableAccount,
         commitment_config::{CommitmentConfig, CommitmentLevel},
         message::{v0, VersionedMessage},
         native_token::LAMPORTS_PER_SOL,
-        signature::{read_keypair_file, Keypair, Signature, Signer},
+        signature::{read_keypair_file, Signature},
         signers::Signers,
-        slot_history::Slot,
-        system_instruction,
         transaction::{Transaction, VersionedTransaction},
     },
     solana_transaction_status::UiTransactionEncoding,
@@ -209,8 +201,6 @@ fn main() -> Result<()> {
         data: lookup_tables::instruction::AddToStore { data: 1u8 }.data(),
     };
 
-    let len = add_to_store_ix.accounts.len();
-
     // get accounts from the instruction
     let accounts_from_add_to_store_ix = add_to_store_ix.clone().accounts;
 
@@ -220,7 +210,7 @@ fn main() -> Result<()> {
             authority: client.payer_pubkey(),
             payer: client.payer_pubkey(),
             system_program: system_program::ID,
-            instruction_program_id: lookup_tables::ID,
+            instruction_program_id: add_to_store_ix.clone().program_id,
             big_instruction: big_ix_key,
         }
         .to_account_metas(None);
@@ -235,18 +225,14 @@ fn main() -> Result<()> {
         data: clockwork_thread_program::instruction::BigInstructionCreate {
             id: big_ix_id.try_to_vec()?,
             instruction_data: add_to_store_ix.clone().data,
-            no_of_accounts: len as u8,
+            no_of_accounts: add_to_store_ix.accounts.len() as u8,
         }
         .data(),
     };
 
     // send transaction
-    let versioned_tx = create_tx_with_address_table_lookup(
-        &client,
-        &[create_big_ix],
-        lut,
-        &[&client.payer],
-    )?;
+    let versioned_tx =
+        create_tx_with_address_table_lookup(&client, &[create_big_ix], lut, &[&client.payer])?;
     let serialized_versioned_tx = serialize(&versioned_tx)?;
     println!(
         "The serialized versioned tx is {} bytes",
