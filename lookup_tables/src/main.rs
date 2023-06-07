@@ -1,6 +1,5 @@
 mod client;
 use client::*;
-use clockwork_thread_program::state::BigInstruction;
 
 use {
     anchor_lang::{
@@ -118,18 +117,6 @@ fn main() -> Result<()> {
         )
         .unwrap();
 
-    println!("Create Big Instruction");
-    let tsi = chrono::Local::now();
-    let big_ix_id = format!("{}_{}", "big ix id", tsi.format("%d_%H:%M:%S"));
-
-    let big_ix_key = BigInstruction::pubkey(
-        client.payer_pubkey(),
-        lookup_tables::ID,
-        big_ix_id.try_to_vec()?,
-    );
-
-    println!("Big instruction key: {:#?}", big_ix_key);
-
     thread::sleep(time::Duration::from_secs(5));
 
     // instruction to add to thread
@@ -201,66 +188,6 @@ fn main() -> Result<()> {
         data: lookup_tables::instruction::AddToStore { data: 1u8 }.data(),
     };
 
-    // get accounts from the instruction
-    let accounts_from_add_to_store_ix = add_to_store_ix.clone().accounts;
-
-    // accounts to create big instruction
-    let mut accounts_from_big_ix_create =
-        clockwork_thread_program::accounts::BigInstructionCreate {
-            authority: client.payer_pubkey(),
-            payer: client.payer_pubkey(),
-            system_program: system_program::ID,
-            instruction_program_id: add_to_store_ix.clone().program_id,
-            big_instruction: big_ix_key,
-        }
-        .to_account_metas(None);
-
-    // append the accounts needed for the instrucion with the accounts to create big instruction. it must be in the same order
-    accounts_from_big_ix_create.extend(accounts_from_add_to_store_ix);
-
-    // instruction to create big instruction with account for the instruction to add to thread appended
-    let create_big_ix = Instruction {
-        accounts: accounts_from_big_ix_create,
-        program_id: clockwork_thread_program::ID,
-        data: clockwork_thread_program::instruction::BigInstructionCreate {
-            id: big_ix_id.try_to_vec()?,
-            instruction_data: add_to_store_ix.clone().data,
-            no_of_accounts: add_to_store_ix.accounts.len() as u8,
-        }
-        .data(),
-    };
-
-    // send transaction
-    let versioned_tx =
-        create_tx_with_address_table_lookup(&client, &[create_big_ix], lut, &[&client.payer])?;
-    let serialized_versioned_tx = serialize(&versioned_tx)?;
-    println!(
-        "The serialized versioned tx is {} bytes",
-        serialized_versioned_tx.len()
-    );
-    let serialized_encoded = base64::encode(serialized_versioned_tx);
-    let config = RpcSendTransactionConfig {
-        skip_preflight: true,
-        preflight_commitment: Some(CommitmentLevel::Processed),
-        encoding: Some(UiTransactionEncoding::Base64),
-        ..RpcSendTransactionConfig::default()
-    };
-
-    let signature = client
-        .send::<String>(
-            RpcRequest::SendTransaction,
-            json!([serialized_encoded, config]),
-        )
-        .unwrap();
-
-    println!("create big ix: https://explorer.solana.com/tx/{}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899", signature);
-    client
-        .confirm_transaction_with_commitment(
-            &Signature::from_str(&signature).unwrap(),
-            CommitmentConfig::finalized(),
-        )
-        .unwrap();
-
     // Thread stuff
     let ts = chrono::Local::now();
     let thread_id = format!("{}_{}", "lutrs", ts.format("%d_%H:%M:%S"));
@@ -315,35 +242,70 @@ fn main() -> Result<()> {
         .data(),
     };
 
-    // Add big instruction to thread
-    let thread_add_big_ix = Instruction {
-        program_id: clockwork_thread_program::ID,
-        accounts: clockwork_thread_program::accounts::ThreadBigInstructionAdd {
+    // append the accounts needed for the instrucion to the accounts to add thread big instruction. it must be in the same order
+    let mut thread_add_big_ix_acct = clockwork_thread_program::accounts::ThreadBigInstructionAdd {
             authority: client.payer_pubkey(),
             system_program: system_program::ID,
             thread,
-            big_instruction: big_ix_key,
-        }
-        .to_account_metas(Some(false)),
-        data: clockwork_thread_program::instruction::ThreadBigInstructionAdd {}.data(),
+            instruction_program_id: add_to_store_ix.clone().program_id,
+        }.to_account_metas(Some(false));
+
+    thread_add_big_ix_acct.extend(add_to_store_ix.clone().accounts);
+
+    let thread_add_big_ix = Instruction {
+        program_id: clockwork_thread_program::ID,
+        accounts: thread_add_big_ix_acct,
+        data: clockwork_thread_program::instruction::ThreadBigInstructionAdd {
+            instruction_data: add_to_store_ix.clone().data
+        }.data(),
     };
     println!("thread {:#?}", thread);
 
     let ixs = [thread_create_ix, create_thread_lut_ix];
     let ixs_2 = [thread_add_big_ix];
     client.send_and_confirm(&ixs, &[&client.payer]).unwrap();
-    let sig = client.send_and_confirm(&ixs_2, &[&client.payer]).unwrap();
+
+    // send thread_add_big_ix with versioned tx
+    let versioned_tx = create_tx_with_address_table_lookup(&client, &ixs_2, lut, &[&client.payer])?;
+    let serialized_versioned_tx = serialize(&versioned_tx)?;
+    println!(
+        "The serialized versioned tx is {} bytes",
+        serialized_versioned_tx.len()
+    );
+    let serialized_encoded = base64::encode(serialized_versioned_tx);
+    let config = RpcSendTransactionConfig {
+        skip_preflight: true,
+        preflight_commitment: Some(CommitmentLevel::Processed),
+        encoding: Some(UiTransactionEncoding::Base64),
+        ..RpcSendTransactionConfig::default()
+    };
+
+    let sig = client
+        .send::<String>(
+            RpcRequest::SendTransaction,
+            json!([serialized_encoded, config]),
+        )
+        .unwrap();
+
+    println!("create big ix: https://explorer.solana.com/tx/{}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899", signature);
+    client
+        .confirm_transaction_with_commitment(
+            &Signature::from_str(&sig).unwrap(),
+            CommitmentConfig::finalized(),
+        )
+        .unwrap();
+
     println!("add big ix to thread tx: https://explorer.solana.com/tx/{}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899", sig);
 
     print!("Waiting for threads to execute...");
     // some time for thread to settle and start executing transactions
     thread::sleep(time::Duration::from_secs(30));
 
-    // inspect each signature in the explorer
+    // inspect thread latest signature in the explorer
     let thread_latest_sig = client.get_signatures_for_address(&thread)?[0]
         .signature
         .clone();
-    println!("Inspect thread latest sig: https://explorer.solana.com/tx/{thread_latest_sig}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899");
+    println!("Thread latest sig: https://explorer.solana.com/tx/{thread_latest_sig}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899");
     Ok(())
 }
 
