@@ -43,10 +43,6 @@ pub enum ClockworkError {
     /// Thrown if the user attempts to withdraw SOL that would put a thread below it's minimum rent threshold.
     #[msg("Withdrawing this amount would leave the thread with less than the minimum required SOL for rent exemption")]
     WithdrawalTooLarge,
-
-    /// Thrown if number of accounts passed into big instruction does not match the number of account specified when creating big instruction
-    #[msg("Number of accounts specified does not match the number of accounts passed ")]
-    AccountsLengthMismatch,
     
     /// Thrown if the size of the instruction to be added to the thread is larger than the next instruction size
     #[msg("Instruction too large for thread")]
